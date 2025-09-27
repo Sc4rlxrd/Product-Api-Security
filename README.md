@@ -26,6 +26,7 @@ O projeto implementa controle de acesso baseado em **roles (ADMIN, USER)** para 
 - MySQL (Docker + Volumes)
 - Lombok
 - Maven
+- Redis
 
 ---
 
