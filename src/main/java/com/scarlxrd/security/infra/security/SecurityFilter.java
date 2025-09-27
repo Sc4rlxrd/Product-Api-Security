@@ -1,5 +1,6 @@
 package com.scarlxrd.security.infra.security;
 
+import com.scarlxrd.security.infra.redis.RedisService;
 import com.scarlxrd.security.model.repositories.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,18 +16,37 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
+
     @Autowired
     TokenService tokenService;
+
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    RedisService redisService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var token = this.recoverToken(request);
         if (token != null) {
-            var login = tokenService.validateToken(token);
-            UserDetails user = userRepository.findByLogin(login);
-            var authentication = new UsernamePasswordAuthenticationToken(user,null,user.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+           try {
+               var decoded = tokenService.decode(token);
+               String jti = decoded.getId();
+
+               // verificar se não está na blackList
+               if (redisService.isBlackListed(jti)){
+                   response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                   return;
+               }
+               String login = decoded.getSubject();
+               UserDetails user = userRepository.findByLogin(login);
+               var authentication = new UsernamePasswordAuthenticationToken(user,null, user.getAuthorities());
+               SecurityContextHolder.getContext().setAuthentication(authentication);
+           } catch (Exception e) {
+               response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+               return;
+           }
         }
         filterChain.doFilter(request,response);
     }

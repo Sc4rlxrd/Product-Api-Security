@@ -1,4 +1,13 @@
 services:
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
   db:
     image: mysql
     container_name: db_mysql
@@ -10,3 +19,4 @@ services:
       - db_volume:/var/lib/mysql
 volumes:
   db_volume:
+  redis_data:
